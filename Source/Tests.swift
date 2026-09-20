@@ -6,6 +6,9 @@ import Foundation
     let root = FileManager.default.temporaryDirectory.appendingPathComponent("todo-inbox-tests-\(UUID().uuidString)")
     defer { try? FileManager.default.removeItem(at: root) }
     do {
+        // Derive fixture names from the selected build configuration so the same tests
+        // protect both the public example and a contributor's ignored local override.
+        let project = "\(AppConfig.current.projectDirectoryPrefix)test"
         let oldPreferences = try JSONDecoder().decode(Preferences.self, from: Data(#"{"automatic":true,"dailyLimit":12,"model":"","codexPath":"/fixture/codex"}"#.utf8))
         precondition(!oldPreferences.isDarkMode && oldPreferences.textScale == 1 && oldPreferences.effort.isEmpty)
         precondition(oldPreferences.allowsWebResearch && oldPreferences.depth == "quick")
@@ -25,24 +28,25 @@ import Foundation
         appearance.textScale = 10; precondition(appearance.textScale == 1.5)
         appearance.textScale = 0; precondition(appearance.textScale == 0.85)
         let desktop = root.appendingPathComponent("Desktop")
-        try FileManager.default.createDirectory(at: desktop.appendingPathComponent("project-alpha"), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: desktop.appendingPathComponent(project), withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: desktop.appendingPathComponent("unrelated"), withIntermediateDirectories: true)
-        try FileManager.default.createSymbolicLink(at: desktop.appendingPathComponent("project-link"), withDestinationURL: desktop.appendingPathComponent("unrelated"))
+        try FileManager.default.createSymbolicLink(at: desktop.appendingPathComponent("\(AppConfig.current.projectDirectoryPrefix)link"), withDestinationURL: desktop.appendingPathComponent("unrelated"))
         let legacy = "-Complete [✓]\n-Multiline\n{\n  \"errors\": []\n}\n\n-Third"
-        try legacy.write(to: desktop.appendingPathComponent("project-alpha/TODO.txt"), atomically: true, encoding: .utf8)
+        let legacyURL = desktop.appendingPathComponent(project).appendingPathComponent(AppConfig.current.legacyTodoFilename)
+        try legacy.write(to: legacyURL, atomically: true, encoding: .utf8)
         let cache = root.appendingPathComponent("models.json")
         try Data(#"{"models":[{"slug":"visible","display_name":"Visible","visibility":"list"},{"slug":"internal","display_name":"Internal","visibility":"hide"},{"slug":"visible","display_name":"Duplicate","visibility":"list"}]}"#.utf8).write(to: cache)
         precondition(modelChoices(at: cache, selected: "saved").map(\.id) == ["visible", "saved"])
         precondition(modelChoices(at: root.appendingPathComponent("missing"), selected: "saved").map(\.id) == ["saved"])
         let data = root.appendingPathComponent("Data")
         let store = Store(directory: data, desktop: desktop, startTimer: false)
-        precondition(store.projects == ["project-alpha"])
+        precondition(store.projects == [project])
         store.importLegacy(); store.importLegacy()
         precondition(store.db.todos.count == 3, "Import must be idempotent")
         precondition(store.db.todos[0].done)
         precondition(store.db.todos[1].text.contains("\"errors\": []"))
         precondition(store.db.todos.allSatisfy { !$0.autoEligible })
-        let preserved = try String(contentsOf: desktop.appendingPathComponent("project-alpha/TODO.txt"))
+        let preserved = try String(contentsOf: legacyURL)
         precondition(preserved == legacy)
         let observation = "$(touch /tmp/never-run-this) `echo no` ; unicode ✓"
         precondition(store.add(observation, project: "Auto", category: "Security"))
@@ -78,8 +82,9 @@ import Foundation
     let root = FileManager.default.temporaryDirectory.appendingPathComponent("todo-worker-tests-\(UUID().uuidString)")
     defer { try? FileManager.default.removeItem(at: root) }
     do {
+        let project = "\(AppConfig.current.projectDirectoryPrefix)test"
         let desktop = root.appendingPathComponent("Desktop")
-        try FileManager.default.createDirectory(at: desktop.appendingPathComponent("project-alpha"), withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: desktop.appendingPathComponent(project), withIntermediateDirectories: true)
         let cache = root.appendingPathComponent("models.json")
         try Data(#"{"models":[{"slug":"fixture","display_name":"Fixture","visibility":"list","supported_reasoning_levels":[{"effort":"low"},{"effort":"high"}]},{"slug":"second","display_name":"Second","visibility":"list","supported_reasoning_levels":[{"effort":"low"}]}]}"#.utf8).write(to: cache)
         let choices = modelChoices(at: cache, selected: "fixture")
@@ -88,7 +93,7 @@ import Foundation
         precondition(supportedEfforts(models: choices, model: "missing").isEmpty)
         let store = Store(directory: root.appendingPathComponent("Data"), desktop: desktop, startTimer: false, modelCacheURL: cache)
         let stub = root.appendingPathComponent("stub-codex")
-        let finding = Finding(project: "project-alpha", category: "Bug", severity: "Low", confidence: "High", summary: "Fixture finding", evidence: ["project-alpha/source.swift:1 — fixture"], nextStep: "Inspect fixture", limitations: "Test output")
+        let finding = Finding(project: project, category: "Bug", severity: "Low", confidence: "High", summary: "Fixture finding", evidence: ["\(project)/source.swift:1 — fixture"], nextStep: "Inspect fixture", limitations: "Test output")
         let encoded = String(data: try JSONEncoder().encode(finding), encoding: .utf8)!
         // Stub asserts the important launch boundaries and consumes stdin as inert data.
         let script = """
@@ -111,7 +116,7 @@ import Foundation
         store.db.preferences.codexPath = stub.path
         store.db.preferences.model = "fixture"
         store.db.preferences.effort = "high"
-        precondition(store.add("$(echo never-execute) ; inert observation", project: "project-alpha", category: "Security"))
+        precondition(store.add("$(echo never-execute) ; inert observation", project: project, category: "Security"))
         let id = store.db.todos[0].id
         store.investigate(id)
         for _ in 0..<100 where store.active != nil { try await Task.sleep(nanoseconds: 100_000_000) }
@@ -159,18 +164,18 @@ import Foundation
             precondition(store.db.todos[0].reviewed == reviewedAt && !store.db.todos[0].needsReview)
         }
         store.update(id, project: "Auto")
-        precondition(store.db.todos[0].projectSelection == "project-alpha" && !store.db.todos[0].needsReview)
+        precondition(store.db.todos[0].projectSelection == project && !store.db.todos[0].needsReview)
         store.update(id, text: store.db.todos[0].text)
         precondition(!store.db.todos[0].needsReview, "Unchanged observation should not mark findings stale")
         store.update(id, text: "changed observation")
         precondition(store.db.todos[0].finding != nil && store.db.todos[0].reviewStale == true)
         let persisted = Store(directory: store.directory, desktop: desktop, startTimer: false)
         precondition(persisted.db.todos[0].finding != nil && persisted.db.todos[0].reviewStale == true)
-        store.update(id, project: "project-alpha")
+        store.update(id, project: project)
         store.investigate(id)
         for _ in 0..<100 where store.active != nil { try await Task.sleep(nanoseconds: 100_000_000) }
         precondition(!store.db.todos[0].needsReview, "Successful recheck clears the stale flag")
-        try script.replacingOccurrences(of: "\"project\":\"project-alpha\"", with: "\"project\":\"untrusted-project\"").write(to: stub, atomically: true, encoding: .utf8)
+        try script.replacingOccurrences(of: "\"project\":\"\(project)\"", with: "\"project\":\"untrusted-project\"").write(to: stub, atomically: true, encoding: .utf8)
         store.investigate(id)
         for _ in 0..<100 where store.active != nil { try await Task.sleep(nanoseconds: 100_000_000) }
         precondition(store.db.todos[0].state == "Failed", "Untrusted classification must be rejected")
