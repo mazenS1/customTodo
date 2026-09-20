@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "https://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>AppName</key>
+    <string>Todo Inbox</string>
+    <key>BundleIdentifier</key>
+    <string>org.example.todo-inbox</string>
+    <key>BundleVersion</key>
+    <string>1</string>
+    <key>ExecutableName</key>
+    <string>TodoInbox</string>
+    <key>MarketingVersion</key>
+    <string>1.0.0</string>
+    <key>MinimumSystemVersion</key>
+    <string>14.0</string>
+    <key>StorageDirectoryName</key>
+    <string>Todo Inbox</string>
+    <key>ProjectRootPath</key>
+    <string>~/Desktop</string>
+    <key>ProjectDirectoryPrefix</key>
+    <string>project-</string>
+    <key>LegacyTodoFilename</key>
+    <string>TODO.txt</string>
+    <key>DefaultCodexExecutable</key>
+    <string>~/.local/bin/codex</string>
+    <key>DefaultDailyReviewLimit</key>
+    <integer>12</integer>
+    <key>MaximumDailyReviewLimit</key>
+    <integer>100</integer>
+    <key>QuickReviewMinutes</key>
+    <integer>10</integer>
+    <key>DeepReviewMinutes</key>
+    <integer>30</integer>
+    <key>Categories</key>
+    <array>
+        <string>Bug</string>
+        <string>Security</string>
+        <string>Data integrity</string>
+        <string>Validation</string>
+        <string>Integration</string>
+        <string>Performance</string>
+        <string>Refactor</string>
+        <string>Testing</string>
+        <string>Documentation</string>
+        <string>Other</string>
+    </array>
+</dict>
+</plist>

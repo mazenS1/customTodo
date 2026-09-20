@@ -1,0 +1,20 @@
+# macOS metadata and generated application bundles must never enter source control.
+.DS_Store
+build/
+*.app/
+
+# Local configuration can contain organization names, paths, and bundle identifiers.
+# Commit only Config/AppConfig.example.plist, which contains public-safe defaults.
+Config/AppConfig.plist
+Config/*.local.plist
+
+# Environment and credential files are always local. Explicit examples remain allowed.
+.env
+.env.*
+!.env.example
+
+# Swift and Xcode build state.
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
