@@ -8,6 +8,16 @@ soft deletion, and one-time import from project todo files.
 The project has no third-party runtime dependencies. It targets Apple Silicon and
 macOS 14 or later.
 
+## Screenshots
+
+### Inbox
+
+![Todo Inbox showing a public-safe sample backlog and selected security todo](docs/images/inbox.jpg)
+
+### Quick capture
+
+![Todo Inbox quick-capture form with a public-safe sample observation](docs/images/capture.jpg)
+
 ## Privacy and security model
 
 Observations and findings are stored locally as JSON. A review sends the selected
